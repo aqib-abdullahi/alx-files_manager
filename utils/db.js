@@ -13,7 +13,6 @@ class DBClient {
 
     this.db = null;
     this.isConnected = false;
-//    this.client.connect();
 
     this.client.connect((err) => {
       if (err) {
@@ -37,7 +36,7 @@ class DBClient {
     const usersCollection = this.db.collection('users');
     const usersCount = await usersCollection.countDocuments();
     return usersCount;
-    }
+  }
 
   async nbFiles() {
     if (!this.isConnected) {
