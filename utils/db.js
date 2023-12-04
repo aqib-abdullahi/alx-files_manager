@@ -1,51 +1,36 @@
-import mongodb from 'mongodb';
+import { MongoClient } from 'mongodb';
+
+const DB_HOST = process.env.DB_HOST || 'localhost';
+const DB_PORT = process.env.DB_PORT || 27017;
+const DB_DATABASE = process.env.DB_DATABASE || 'files_manager';
+const url = `mongodb://${DB_HOST}:${DB_PORT}`;
 
 class DBClient {
   constructor() {
-    const host = process.env.DB_HOST || 'localhost';
-    const port = process.env.DB_PORT || 27017;
-    const database = process.env.DB_DATABASE || 'files_manager';
-
-    this.client = new mongodb.MongoClient(`mongodb://${host}:${port}`, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
-
-    this.db = null;
-    this.isConnected = false;
-
-    this.client.connect((err) => {
-      if (err) {
-        console.error('MongoDB connection error:', err);
+    MongoClient.connect(url, { useUnifiedTopology: true }, (err, client) => {
+      if (!err) {
+        this.db = client.db(DB_DATABASE);
+        this.usersCollection = this.db.collection('users');
+        this.filesCollection = this.db.collection('files');
       } else {
-        this.db = this.client.db(database);
-        this.isConnected = true;
+        console.log(err.message);
+        this.db = false;
       }
     });
   }
 
   isAlive() {
-    return this.isConnected;
+    return Boolean(this.db);
   }
 
   async nbUsers() {
-    if (!this.isConnected) {
-      throw new Error('DBClient is not connected to MongoDB');
-    }
-
-    const usersCollection = this.db.collection('users');
-    const usersCount = await usersCollection.countDocuments();
-    return usersCount;
+    const numberOfUsers = this.usersCollection.countDocuments();
+    return numberOfUsers;
   }
 
   async nbFiles() {
-    if (!this.isConnected) {
-      throw new Error('DBClient is not connected to MongoDB');
-    }
-
-    const filesCollection = this.db.collection('files');
-    const filesCount = await filesCollection.countDocuments();
-    return filesCount;
+    const numberOfFiles = this.filesCollection.countDocuments();
+    return numberOfFiles;
   }
 }
 
