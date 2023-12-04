@@ -1,12 +1,12 @@
 import crypto from 'crypto';
 import dbClient from '../utils/db';
 
-const UsersController = {
-  async postNew(req, res) {
-    //const email = req.body ? req.body.email : string;
-    //const password = req.body ? req.body.password : string;
-    const email = req.body && req.body.email ? req.body.email : 'string';
-    const password = req.body && req.body.password ? req.body.password : 'string';
+export default class UsersController {
+  static async postNew(req, res) {
+    //const email = req.body ? req.body.email : null;
+    //const password = req.body ? req.body.password : null;
+    const email = req.body && req.body.email ? req.body.email : null;
+    const password = req.body && req.body.password ? req.body.password : null;
 
     if (!email) {
       return res.status(400).json({ error: 'Missing email' });
@@ -38,7 +38,5 @@ const UsersController = {
     } catch (error) {
       return res.status(500).json({ error: 'Internal Server Error' });
     }
-  },
-};
-
-export default UsersController;
+  }
+}
