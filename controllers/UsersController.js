@@ -1,5 +1,7 @@
 import crypto from 'crypto';
 import dbClient from '../utils/db';
+import userUtils from '../utils/user';
+import { ObjectId } from 'mongodb';
 
 export default class UsersController {
   static async postNew(req, res) {
@@ -38,5 +40,21 @@ export default class UsersController {
     } catch (error) {
       return res.status(500).json({ error: 'Internal Server Error' });
     }
+  }
+
+   static async getMe(request, response) {
+    const { userId } = await userUtils.getUserIdAndKey(request);
+
+    const user = await userUtils.getUser({
+      _id: ObjectId(userId),
+    });
+
+    if (!user) return response.status(401).send({ error: 'Unauthorized' });
+
+    const processedUser = { id: user._id, ...user };
+    delete processedUser._id;
+    delete processedUser.password;
+
+    return response.status(200).send(processedUser);
   }
 }
