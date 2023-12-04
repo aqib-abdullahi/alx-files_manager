@@ -1,45 +1,46 @@
-import crypto from 'crypto';
+import { ObjectId } from 'mongodb';
+import sha1 from 'sha1';
+import Queue from 'bull';
 import dbClient from '../utils/db';
 import userUtils from '../utils/user';
-import { ObjectId } from 'mongodb';
 
-export default class UsersController {
-  static async postNew(req, res) {
-    //const email = req.body ? req.body.email : null;
-    //const password = req.body ? req.body.password : null;
-    const email = req.body && req.body.email ? req.body.email : null;
-    const password = req.body && req.body.password ? req.body.password : null;
+const userQueue = new Queue('userQueue');
 
-    if (!email) {
-      return res.status(400).json({ error: 'Missing email' });
-    }
+class UsersController {
+  static async postNew(request, response) {
+    const { email, password } = request.body;
 
-    if (!password) {
-      return res.status(400).json({ error: 'Missing password' });
-    }
+    if (!email) return response.status(400).send({ error: 'Missing email' });
 
-    const userExists = await dbClient.db.collection('users').findOne({ email });
-    if (userExists) {
-      return res.status(400).json({ error: 'Already exist' });
-    }
+    if (!password) { return response.status(400).send({ error: 'Missing password' }); }
 
-    const hashedPassword = crypto.createHash('sha1').update(password).digest('hex');
+    const emailExists = await dbClient.usersCollection.findOne({ email });
 
+    if (emailExists) { return response.status(400).send({ error: 'Already exist' }); }
+
+    const sha1Password = sha1(password);
+
+    let result;
     try {
-      const result = await dbClient.db.collection('users').insertOne({
+      result = await dbClient.usersCollection.insertOne({
         email,
-        password: hashedPassword,
+        password: sha1Password,
       });
-
-      const newUser = {
-        id: result.insertedId,
-        email,
-      };
-
-      return res.status(201).json(newUser);
-    } catch (error) {
-      return res.status(500).json({ error: 'Internal Server Error' });
+    } catch (err) {
+      await userQueue.add({});
+      return response.status(500).send({ error: 'Error creating user.' });
     }
+
+    const user = {
+      id: result.insertedId,
+      email,
+    };
+
+    await userQueue.add({
+      userId: result.insertedId.toString(),
+    });
+
+    return response.status(201).send(user);
   }
 
    static async getMe(request, response) {
@@ -58,3 +59,5 @@ export default class UsersController {
     return response.status(200).send(processedUser);
   }
 }
+
+export default UsersController;
